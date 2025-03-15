@@ -1,7 +1,5 @@
 using System.Runtime.InteropServices;
-using FFXIVClientStructs.FFXIV.Client.Game.Control;
 using FFXIVClientStructs.FFXIV.Client.Graphics.Render;
-using FFXIVClientStructs.Havok;
 using FFXIVClientStructs.Havok.Animation.Playback.Control.Default;
 
 namespace AnimSync;

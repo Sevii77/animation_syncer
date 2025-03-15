@@ -5,7 +5,7 @@
 	"Description": "Syncs Animations easily by standing ontop another with a compatible animations or use the command to restart every animation.",
 	"InternalName": "AnimSync",
 	"ApplicableVersion": "any",
-	"DalamudApiLevel": 10,
+	"DalamudApiLevel": 11,
 	"LoadPriority": 1,
 	"Tags": []
 }
