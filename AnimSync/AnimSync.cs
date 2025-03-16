@@ -57,6 +57,7 @@ public class AnimSync: IDalamudPlugin {
 			RootSyncs.Clear();
 		
 		foreach(var obj in Objects) {
+			if(obj.ObjectIndex > 200) continue; // disables auto sync on gpose and ui actors (character and dye)
 			if(!IsValidObject(obj)) continue;
 			if(!LastPositions.ContainsKey(obj.Address) || LastPositions[obj.Address] != obj.Position) continue;
 			
@@ -66,6 +67,7 @@ public class AnimSync: IDalamudPlugin {
 			foreach(var obj2 in Objects) {
 				if(obj == obj2) continue;
 				if(!IsValidObject(obj2)) continue;
+				if(!LastPositions.ContainsKey(obj2.Address) || LastPositions[obj2.Address] != obj2.Position) continue;
 				
 				var actor2 = (Actor*)obj2.Address;
 				
@@ -128,6 +130,7 @@ public class AnimSync: IDalamudPlugin {
 		
 		foreach(var obj in Objects) {
 			if(IsValidObject(obj)) {
+				// Logger.Debug($"{obj.DataId}; {obj.EntityId}; {obj.GameObjectId}; {obj.ObjectIndex}; {obj.SubKind}");
 				var actor = (Actor*)obj.Address;
 				actor->Control->hkaAnimationControl.LocalTime = 0;
 			}
