@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Numerics;
 using System.Collections.Generic;
 using Dalamud.IoC;
@@ -11,6 +12,7 @@ using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Game.ClientState.Objects.Types;
 using FFXIVClientStructs.FFXIV.Client.Graphics.Render;
 using FFXIVClientStructs.Havok.Animation.Rig;
+using Newtonsoft.Json;
 
 namespace AnimSync;
 
@@ -18,15 +20,30 @@ public class AnimSync: IDalamudPlugin {
 	public string Name => "Animation Syncer";
 	
 	[PluginService] public static IDalamudPluginInterface Interface  {get; private set;} = null!;
+	[PluginService] public static IFramework              Framework  {get; private set;} = null!;
 	[PluginService] public static ICommandManager         Commands   {get; private set;} = null!;
 	[PluginService] public static IPluginLog              Logger     {get; private set;} = null!;
 	[PluginService] public static IObjectTable            Objects    {get; private set;} = null!;
 	[PluginService] public static IGameInteropProvider    HookProv   {get; private set;} = null!;
 	[PluginService] public static ISigScanner             SigScanner {get; private set;} = null!;
+
+	private class Config {
+		public bool Enabled = true;
+		
+		public static Config Load() {
+			return Interface.ConfigFile.Exists ? JsonConvert.DeserializeObject<Config>(File.ReadAllText(Interface.ConfigFile.FullName)) ?? new() : new();
+		}
+		
+		public void Save() {
+			File.WriteAllText(Interface.ConfigFile.FullName, JsonConvert.SerializeObject(this));
+		}
+	}
 	
 	private const string command = "/animsync";
 	private const float MAXDIST = 0.25f;
 	private const float MAXROT = (float)Math.PI / 4; // 45 degrees
+	
+	private Config config;
 	
 	private unsafe delegate void AnimRootDelegate(hkaPose* pose);
 	private static Hook<AnimRootDelegate> AnimRootHook = null!;
@@ -39,20 +56,31 @@ public class AnimSync: IDalamudPlugin {
 		AnimRootHook = HookProv.HookFromAddress<AnimRootDelegate>(SigScanner.ScanText("48 83 EC 18 80 79 ?? 00"), AnimRoot);
 		AnimRootHook.Enable();
 		
-		Interface.UiBuilder.Draw += Draw;
+		config = Config.Load();
+		
+		if(config.Enabled)
+			Framework.Update += Tick;
+		
 		Commands.AddHandler(command, new CommandInfo(OnCommand) {
-			HelpMessage = "Resets all player and battlenpc animations to 0"
+			HelpMessage = "Resets all player and battlenpc animations to 0",
+		});
+		
+		Commands.AddHandler($"{command} toggle", new CommandInfo(OnCommand) {
+			HelpMessage = "Toggle auto sync and allign",
 		});
 	}
 	
 	public void Dispose() {
 		AnimRootHook.Dispose();
 		
-		Interface.UiBuilder.Draw -= Draw;
+		if(config.Enabled)
+			Framework.Update -= Tick;
+		
 		Commands.RemoveHandler(command);
+		Commands.RemoveHandler($"{command} toggle");
 	}
 	
-	private unsafe void Draw() {
+	private unsafe void Tick(IFramework _) {
 		lock(RootSyncs)
 			RootSyncs.Clear();
 		
@@ -60,6 +88,7 @@ public class AnimSync: IDalamudPlugin {
 			if(obj.ObjectIndex > 200) continue; // disables auto sync on gpose and ui actors (character and dye)
 			if(!IsValidObject(obj)) continue;
 			if(!LastPositions.ContainsKey(obj.Address) || LastPositions[obj.Address] != obj.Position) continue;
+			if(!((FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)obj.Address)->IsNotMounted()) continue;
 			
 			var actor = (Actor*)obj.Address;
 			var syncs = new List<(IGameObject, bool)>();
@@ -80,13 +109,13 @@ public class AnimSync: IDalamudPlugin {
 			
 			if(syncs.Count > 0) {
 				var transform = actor->DrawObject->Skeleton->Transform;
-				var position = (Vector3)transform.Position;
+				var position = new Vector3(transform.Position.X, obj.Position.Y, transform.Position.Z);
 				var rotations = new List<Quaternion>() {transform.Rotation};
 				
 				var time = actor->Control->hkaAnimationControl.LocalTime;
 				foreach(var (syncObj, syncTime) in syncs) {
-					transform = actor->DrawObject->Skeleton->Transform;
-					position += (Vector3)transform.Position;
+					transform = ((Actor*)syncObj.Address)->DrawObject->Skeleton->Transform;
+					position += new Vector3(transform.Position.X, obj.Position.Y, transform.Position.Z);
 					rotations.Add(transform.Rotation);
 					
 					if(syncTime)
@@ -107,11 +136,13 @@ public class AnimSync: IDalamudPlugin {
 						rotation = Quaternion.Slerp(rotation, rotations[i], 1f / (i + 1));
 				}
 				
-				RootSyncs[(nint)actor->DrawObject->Skeleton->PartialSkeletons->GetHavokPose(0)] = (position, rotation, (nint)actor->DrawObject->Skeleton);
+				var skel = actor->DrawObject->Skeleton;
+				RootSyncs[(nint)actor->DrawObject->Skeleton->PartialSkeletons->GetHavokPose(0)] = (new Vector3(position.X, skel->Transform.Position.Y, position.Z), rotation, (nint)skel);
 				actor->Control->hkaAnimationControl.LocalTime = time;
 				
 				foreach(var (syncObj, syncTime) in syncs) {
-					RootSyncs[(nint)((Actor*)syncObj.Address)->DrawObject->Skeleton->PartialSkeletons->GetHavokPose(0)] = (position, rotation, (nint)((Actor*)syncObj.Address)->DrawObject->Skeleton);
+					skel = ((Actor*)syncObj.Address)->DrawObject->Skeleton;
+					RootSyncs[(nint)((Actor*)syncObj.Address)->DrawObject->Skeleton->PartialSkeletons->GetHavokPose(0)] = (new Vector3(position.X, skel->Transform.Position.Y, position.Z), rotation, (nint)skel);
 					if(syncTime)
 						((Actor*)syncObj.Address)->Control->hkaAnimationControl.LocalTime = time;
 				}
@@ -127,6 +158,22 @@ public class AnimSync: IDalamudPlugin {
 	private unsafe void OnCommand(string cmd, string args) {
 		if(cmd != command)
 			return;
+		
+		if(args == "toggle") {
+			config.Enabled = !config.Enabled;
+			if(config.Enabled)
+				Framework.Update += Tick;
+			else {
+				Framework.Update -= Tick;
+				
+				lock(RootSyncs)
+					RootSyncs.Clear();
+			}
+			
+			config.Save();
+			
+			return;
+		}
 		
 		foreach(var obj in Objects) {
 			if(IsValidObject(obj)) {

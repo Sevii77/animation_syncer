@@ -3,7 +3,7 @@
 	<PropertyGroup>
 		<AssemblyName>AnimSync</AssemblyName>
 		<Authors>Sevii</Authors>
-		<Version>1.1.1</Version>
+		<Version>1.2.0</Version>
 		
 		<TargetFramework>net8.0-windows</TargetFramework>
 		<Platforms>x64</Platforms>
@@ -35,6 +35,10 @@
 		</Reference>
 		<Reference Include="FFXIVClientStructs">
 			<HintPath>$(DalamudLibPath)FFXIVClientStructs.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+		<Reference Include="Newtonsoft.Json">
+			<HintPath>$(DalamudLibPath)Newtonsoft.Json.dll</HintPath>
 			<Private>false</Private>
 		</Reference>
 	</ItemGroup>
