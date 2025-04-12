@@ -6,7 +6,7 @@ namespace AnimSync;
 
 [StructLayout(LayoutKind.Explicit)]
 public unsafe struct Actor {
-	[FieldOffset(0x100)] public DrawObject* DrawObject;
+	[FieldOffset(0xF0)] public DrawObject* DrawObject;
 	
 	public hkaDefaultAnimationControl* Control {
 		get {
