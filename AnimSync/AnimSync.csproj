@@ -3,7 +3,7 @@
 	<PropertyGroup>
 		<AssemblyName>AnimSync</AssemblyName>
 		<Authors>Sevii</Authors>
-		<Version>1.2.1</Version>
+		<Version>1.2.2</Version>
 		
 		<TargetFramework>net9.0-windows</TargetFramework>
 		<Platforms>x64</Platforms>
@@ -27,10 +27,6 @@
 		<PackageReference Include="DalamudPackager" Version="2.1.12"/>
 		<Reference Include="Dalamud">
 			<HintPath>$(DalamudLibPath)Dalamud.dll</HintPath>
-			<Private>false</Private>
-		</Reference>
-		<Reference Include="ImGui.NET">
-			<HintPath>$(DalamudLibPath)ImGui.NET.dll</HintPath>
 			<Private>false</Private>
 		</Reference>
 		<Reference Include="FFXIVClientStructs">
