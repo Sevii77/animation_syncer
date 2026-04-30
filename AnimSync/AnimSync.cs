@@ -197,6 +197,6 @@ public class AnimSync: IDalamudPlugin {
 	}
 	
 	private unsafe bool IsValidObject(IGameObject obj) {
-		return (obj.ObjectKind == ObjectKind.BattleNpc || obj.ObjectKind == ObjectKind.Player) && ((Actor*)obj.Address)->Control != null;
+		return (obj.ObjectKind == ObjectKind.BattleNpc || obj.ObjectKind == ObjectKind.Pc) && ((Actor*)obj.Address)->Control != null;
 	}
 }
