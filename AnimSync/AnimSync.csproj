@@ -4,6 +4,7 @@
 		<AssemblyName>AnimSync</AssemblyName>
 		<Authors>Sevii</Authors>
 		<Version>1.2.4</Version>
+		<VersionComponents>3</VersionComponents>
 		
 		<TargetFramework>net10.0-windows</TargetFramework>
 		<Platforms>x64</Platforms>
@@ -20,11 +21,11 @@
 	</PropertyGroup>
 	
 	<Target Name="PackagePlugin" AfterTargets="Build">
-		<DalamudPackager ProjectDir="$(ProjectDir)" OutputPath="$(OutputPath)" AssemblyName="$(AssemblyName)" MakeZip="false"/>
+		<DalamudPackager ProjectDir="$(ProjectDir)" OutputPath="$(OutputPath)" AssemblyName="$(AssemblyName)" VersionComponents="3" MakeZip="false"/>
 	</Target>
 	
 	<ItemGroup>
-		<PackageReference Include="DalamudPackager" Version="2.1.12"/>
+		<PackageReference Include="DalamudPackager" Version="15.0.0"/>
 		<Reference Include="Dalamud">
 			<HintPath>$(DalamudLibPath)Dalamud.dll</HintPath>
 			<Private>false</Private>
